@@ -1,4 +1,4 @@
-package week05.jdbc;
+package week05.db;
 
 /**
  * @author Created by diandian
@@ -30,5 +30,13 @@ public class Student {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    @Override
+    public String toString() {
+        return "Student{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                '}';
     }
 }

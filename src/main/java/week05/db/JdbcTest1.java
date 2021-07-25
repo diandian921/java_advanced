@@ -1,4 +1,7 @@
-package week05.jdbc;
+package week05.db;
+
+import week05.db.dbmanager.DBManger;
+import week05.db.dbmanager.JdbcUtils;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -11,8 +14,10 @@ import java.sql.Statement;
  */
 public class JdbcTest1 {
 
+    DBManger dbManger = new JdbcUtils();
+
     public int insert(Student student) {
-        Connection conn = JdbcUtils.getConnection();
+        Connection conn = dbManger.getConnection();
         int res = 0;
         String sql = "insert into student(id,name) values(" + student.getId() + ",'" + student.getName() + "')";
         Statement statement = null;
@@ -22,13 +27,13 @@ public class JdbcTest1 {
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            JdbcUtils.close(conn, statement, null);
+            dbManger.close(conn, statement, null);
         }
         return res;
     }
 
     public int delete(int id) {
-        Connection conn = JdbcUtils.getConnection();
+        Connection conn = dbManger.getConnection();
         int res = 0;
         String sql = "delete from student where id = " + id;
         Statement statement = null;
@@ -38,13 +43,13 @@ public class JdbcTest1 {
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            JdbcUtils.close(conn, statement, null);
+            dbManger.close(conn, statement, null);
         }
         return res;
     }
 
     public int update(Student student) {
-        Connection conn = JdbcUtils.getConnection();
+        Connection conn = dbManger.getConnection();
         int res = 0;
         String sql = "update student set name = '" + student.getName() + "' where id = " + student.getId();
         Statement statement = null;
@@ -54,13 +59,13 @@ public class JdbcTest1 {
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            JdbcUtils.close(conn, statement, null);
+            dbManger.close(conn, statement, null);
         }
         return res;
     }
 
     public Student queryById(int id) {
-        Connection conn = JdbcUtils.getConnection();
+        Connection conn = dbManger.getConnection();
         int res = 0;
         String sql = "select id,name from student where id = " + id;
         Statement statement = null;
@@ -77,7 +82,7 @@ public class JdbcTest1 {
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            JdbcUtils.close(conn, statement, resultSet);
+            dbManger.close(conn, statement, resultSet);
         }
         return student;
     }
