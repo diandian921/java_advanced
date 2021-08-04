@@ -8,7 +8,7 @@
 本次采用了三种方式进行测试，分别是：
 1. 使用存储过程（initData）一条一条插入，一个事务
 2. 使用存储过程（initData_1）一条一条插入，一条一个事务
-3. 将1或2的结果使用 mysqldump 导出后，再使用source导入
+3. 将1或2的结果使用 mysqldump 导出后，再使用source导入 ,导出格式为insert 多个values
 ```
 mysqldump -hlocalhost -P3306 -uroot --add-locks=0 --no-create-info --single-transaction --set-grid-purged=OFF shopping --result-file=/Users/wuweihua/Desktop/order.sql
 ```
