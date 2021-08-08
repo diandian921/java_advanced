@@ -67,3 +67,17 @@ BEGIN
 END $
 ```
 
+## 作业二
+>读写分离 - 动态切换数据源版本 1.0
+
+### 解决思路
+1. 借助spring提供的抽象类AbstractRoutingDataSource，通过继承抽象类，并覆盖determineCurrentLookupKey方法。
+2. 增加Aspect环绕服务，在before里面设置好数据源本地线程变量、after之后清理掉数据源本地线程变量。
+3. 每次获取的时候，若数据源本地线程变量为空，则默认走主dataSource。
+
+代码：
+        
+
+## 作业三
+>读写分离 - 数据库框架版本 2.0
+    
