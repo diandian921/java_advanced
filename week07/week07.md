@@ -80,4 +80,80 @@ END $
 
 ## 作业三
 >读写分离 - 数据库框架版本 2.0
+
+Sharding-Sphere是一套开源的分布式数据库中间件解决方案组成的生态圈，它由Sharding-JDBC、Sharding-Proxy和Sharding-Sidecar这3款产品组成。3款产品提供标准化的数据分片、读写分离、柔性事务和数据治理功能，可适用于如Java同构、异构语言、容器、云原生等各种多样化的应用场景。
+我们这里主要使用sharding-jdbc来实现读写分离，当然框架还支持分库分表，我们也会根据业务需要增加分表功能的使用。
+sharding-jdbc的使用十分便捷，基本上没有代码侵入，直接在springboot中进行配置即可。
+
+创建一个maven 工程，pom文件如下
+```sql
+<parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.1.5.RELEASE</version>
+        <relativePath/>
+    </parent>
+    <groupId>sharding-master-slave</groupId>
+    <artifactId>sharding-master-slave</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>spring-boot-sharding-table</name>
+    <description>基于 Spring Boot 2.1.5 使用sharding-sphere + JdbcTemplate 实现读写分离</description>
+ 
+    <properties>
+        <java.version>1.8</java.version>
+    </properties>
+ 
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.shardingsphere</groupId>
+            <artifactId>sharding-jdbc-spring-boot-starter</artifactId>
+            <version>3.1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>io.shardingsphere</groupId>
+            <artifactId>sharding-jdbc-spring-namespace</artifactId>
+            <version>3.1.0</version>
+        </dependency>
+    </dependencies>
+```
+
+
+配置文件
+```
+# 配置真实数据源
+sharding.jdbc.datasource.names=master,slave
+#主数据库
+sharding.jdbc.datasource.master.type=com.zaxxer.hikari.HikariDataSource
+sharding.jdbc.datasource.master.hikari.driver-class-name=com.mysql.cj.jdbc.Driver
+sharding.jdbc.datasource.master.jdbc-url=jdbc:mysql://localhost:3306/test?useUnicode=true&characterEncoding=utf-8&allowMultiQueries=true
+sharding.jdbc.datasource.master.username=root
+sharding.jdbc.datasource.master.password=root
+# 从数据库
+sharding.jdbc.datasource.slave.type=com.zaxxer.hikari.HikariDataSource
+sharding.jdbc.datasource.slave.hikari.driver-class-name=com.mysql.cj.jdbc.Driver
+sharding.jdbc.datasource.slave.jdbc-url=jdbc:mysql://localhost:3307/test?useUnicode=true&characterEncoding=utf-8&allowMultiQueries=true
+sharding.jdbc.datasource.slave.username=root
+sharding.jdbc.datasource.slave.password=root
+# 配置读写分离
+# 配置从库选择策略，提供轮询与随机，这里选择用轮询
+sharding.jdbc.config.masterslave.load-balance-algorithm-type=round_robin
+sharding.jdbc.config.masterslave.name=ms
+sharding.jdbc.config.masterslave.master-data-source-name=master
+sharding.jdbc.config.masterslave.slave-data-source-names=slave
+# 开启SQL显示，默认值: false，注意：仅配置读写分离时不会打印日志
+sharding.jdbc.config.props.sql.show=true
+spring.main.allow-bean-definition-overriding=true
+```
     
