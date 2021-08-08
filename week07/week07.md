@@ -76,7 +76,7 @@ END $
 3. 每次获取的时候，若数据源本地线程变量为空，则默认走主dataSource。
 
 代码：
-        
+    https://github.com/diandian921/java_advanced/tree/main/week07/homework2/src/main/java
 
 ## 作业三
 >读写分离 - 数据库框架版本 2.0
