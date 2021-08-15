@@ -6,4 +6,4 @@
 
 2.基于hmily TCC或ShardingSphere的Atomikos XA实现一个简单的分布式事务应用demo（二选一）
 
- 作业：
+ 作业：[链接](https://github.com/diandian921/java_advanced/tree/main/homework/homework0802)
