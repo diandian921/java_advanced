@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.wwh.homework0801.mapper.OrderInfoMapper">
+    <sql id="Base_Column_List">
+            id, user_info_id
+    </sql>
+
+    <insert id="insert" parameterType="com.wwh.homework0801.model.OrderInfo">
+        INSERT INTO order_info
+            (id, user_info_id)
+        VALUES
+            (#{id}, #{userInfoId})
+    </insert>
+
+    <delete id="delete">
+        delete from order_info where id = #{id}
+    </delete>
+
+    <update id="update" parameterType="com.wwh.homework0801.model.OrderInfo">
+        UPDATE order_info
+        SET
+        <trim suffixOverrides="," suffix="WHERE id = #{id}">
+            <if test="userInfoId != null">user_info_id = #{userInfoId} </if>
+        </trim>
+    </update>
+
+    <select id="queryList" resultType="com.wwh.homework0801.model.OrderInfo" parameterType="HashMap">
+        select
+        <include refid="Base_Column_List"/>
+        from order_info
+        <trim prefix="WHERE" prefixOverrides="AND |OR ">
+            <if test="id != null">
+                id = #{id}
+            </if>
+            <if test="userInfoId != null">
+                and user_info_id = #{userInfoId}
+            </if>
+        </trim>
+    </select>
+
+</mapper>
