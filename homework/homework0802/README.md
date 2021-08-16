@@ -1,82 +1,80 @@
 ### 作业：基于hmily TCC或ShardingSphere的Atomikos XA实现一个简单的分布式事务应用demo（二选一）
 
-说明：作业采用ShardingSphere，环境基于上个作业创建的库表。2个库，每个库16张表。
+说明：作业采用ShardingSphere，2个库，每个库2张表。
 
 程序配置：
 
 maven依赖：
 ```xml
      <dependencies>
-            <dependency>
-                <groupId>mysql</groupId>
-                <artifactId>mysql-connector-java</artifactId>
-                <version>5.1.45</version>
-            </dependency>
-    
-            <dependency>
-                <groupId>org.apache.shardingsphere</groupId>
-                <artifactId>shardingsphere-jdbc-core</artifactId>
-                <version>5.0.0-beta</version>
-            </dependency>
-    
-            <dependency>
-                <groupId>org.apache.shardingsphere</groupId>
-                <artifactId>shardingsphere-transaction-xa-core</artifactId>
-                <version>5.0.0-beta</version>
-            </dependency>
-    
-            <dependency>
-                <groupId>com.zaxxer</groupId>
-                <artifactId>HikariCP</artifactId>
-                <version>2.2.5</version>
-            </dependency>
+           <dependency>
+                   <groupId>mysql</groupId>
+                   <artifactId>mysql-connector-java</artifactId>
+                   <version>8.0.11</version>
+               </dependency>
+               <dependency>
+                   <groupId>com.zaxxer</groupId>
+                   <artifactId>HikariCP</artifactId>
+                   <version>4.0.3</version>
+               </dependency>
+               <dependency>
+                   <groupId>org.apache.shardingsphere</groupId>
+                   <artifactId>shardingsphere-jdbc-core</artifactId>
+                   <version>5.0.0-alpha</version>
+               </dependency>
+       
+               <!-- 使用 XA 事务时，需要引入此模块 -->
+               <dependency>
+                   <groupId>org.apache.shardingsphere</groupId>
+                   <artifactId>shardingsphere-transaction-xa-core</artifactId>
+                   <version>5.0.0-alpha</version>
+               </dependency>
         </dependencies>
 ```
 
 sharding-config.xml
 ```yaml
-# 配置真实数据源
 dataSources:
-  # 配置第 1 个数据源
-  ds_0: com.zaxxer.hikari.HikariDataSource
-    jdbcUrl: jdbc:mysql://localhost:3306/shopping_0?serverTimezone=UTC&useUnicode=true&characterEncoding=utf-8&useSSL=false&allowPublicKeyRetrieval=true
-    driverClassName: com.mysql.jdbc.Driver
+  ds_0: !!com.zaxxer.hikari.HikariDataSource
+    driverClassName: com.mysql.cj.jdbc.Driver
+    jdbcUrl: jdbc:mysql://localhost:3306/ds_0?serverTimezone=UTC&useSSL=false&useUnicode=true&characterEncoding=UTF-8
     username: root
-    password: root
-  # 配置第 2 个数据源
-  ds_1: com.zaxxer.hikari.HikariDataSource
-    driverClassName: com.mysql.jdbc.Driver
-    jdbcUrl: jdbc:mysql://localhost:3306/shopping_1?serverTimezone=UTC&useUnicode=true&characterEncoding=utf-8&useSSL=false&allowPublicKeyRetrieval=true
+    password: 1qaz2wsx
+  ds_1: !!com.zaxxer.hikari.HikariDataSource
+    driverClassName: com.mysql.cj.jdbc.Driver
+    jdbcUrl: jdbc:mysql://localhost:3306/ds_1?serverTimezone=UTC&useSSL=false&useUnicode=true&characterEncoding=UTF-8
     username: root
-    password: root
+    password: 1qaz2wsx
 
 rules:
   # 配置分片规则
   - !SHARDING
     tables:
-      # 配置 order_info 表规则
+      # 配置 t_order 表规则
       t_order:
-        actualDataNodes: ds_${0..1}.order_info_${0..15}
+        actualDataNodes: ds_${0..1}.t_order_${0..1}
         # 配置分库策略
         databaseStrategy:
           standard:
-            shardingColumn: user_info_id
+            shardingColumn: user_id
             shardingAlgorithmName: database_inline
         # 配置分表策略
         tableStrategy:
           standard:
-            shardingColumn: id
+            shardingColumn: order_id
             shardingAlgorithmName: table_inline
+
     # 配置分片算法
     shardingAlgorithms:
       database_inline:
         type: INLINE
         props:
-          algorithm-expression: ds_${user_info_id % 2}
+          algorithm-expression: ds_${user_id % 2}
       table_inline:
         type: INLINE
         props:
-          algorithm-expression: order_info_${user_info_id % 16}
+          algorithm-expression: t_order_${order_id % 2}
+
 ```
 
 测试demo:
@@ -89,6 +87,7 @@ import javax.sql.DataSource;
 import java.io.File;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.SQLException;
 
 /**
  * @author Created by diandian
@@ -98,48 +97,59 @@ public class XADemo {
 
 
     public static void main(String[] args) throws Exception {
-        String path = System.getProperty("user.dir") + "/src/main/resources/sharding-config.yaml";
-        DataSource dataSource = YamlShardingSphereDataSourceFactory.createDataSource(new File(path));
+        // 使用 ShardingSphereDataSource
+        String path = "/sharding-config.yaml";
+        File yamlFile = getFile(path);
+        DataSource dataSource = YamlShardingSphereDataSourceFactory.createDataSource(yamlFile);
 
+        // 支持 TransactionType.LOCAL, TransactionType.XA, TransactionType.BASE
         TransactionTypeHolder.set(TransactionType.XA);
-
         Connection conn = dataSource.getConnection();
-        String sql = "insert into order_info (id, user_info_id) VALUES (?, ?);";
-
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            conn.setAutoCommit(false);
-            for (int i = 1; i < 16; i++) {
-                statement.setLong(1, i);
-                statement.setLong(2, i);
-                statement.executeUpdate();
+        conn.setAutoCommit(false);
+        PreparedStatement ps = conn.prepareStatement("INSERT INTO t_order (order_id, user_id) VALUES (?, ?)");
+        try {
+            for (int i = 1; i < 5; i++) {
+                ps.setLong(1, i);
+                ps.setLong(2, i);
+                ps.executeUpdate();
             }
             conn.commit();
-        }
-
-
-        // 如果设置XA事务生效，则所有的数据都不会插入
-        // 如果设置XA事务不生效，则所有数据就会插入到数据库
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            conn.setAutoCommit(false);
-            for (int i = 1; i < 16; i++) {
-                statement.setLong(1, i + 15);
-                statement.setLong(2, i + 15);
-
-                //模拟异常
-                if (i == 10) {
-                    throw new RuntimeException();
-                }
-                statement.executeUpdate();
-            }
-            conn.commit();
-        } catch (Exception e) {
+        } catch (SQLException e) {
+            System.out.println("first error :" + e.getMessage());
             conn.rollback();
         } finally {
+            ps.close();
             conn.close();
         }
 
+        System.out.println("----------------------------------------");
+
+
+        conn.setAutoCommit(false);
+        try {
+            for (int i = 5; i < 9; i++) {
+                ps.setLong(1, i);
+                ps.setLong(2, i);
+                if (i == 8) {
+                    throw new RuntimeException("出错了");
+                }
+                ps.executeUpdate();
+            }
+            conn.commit();
+        } catch (SQLException e) {
+            System.out.println("second error :" + e.getMessage());
+            conn.rollback();
+        } finally {
+            ps.close();
+            conn.close();
+        }
 
     }
+
+    private static File getFile(final String fileName) {
+        return new File(Thread.currentThread().getClass().getResource(fileName).getFile());
+    }
 }
+
 
 ```

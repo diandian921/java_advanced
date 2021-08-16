@@ -6,6 +6,7 @@ import javax.sql.DataSource;
 import java.io.File;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.SQLException;
 
 /**
  * @author Created by diandian
@@ -15,46 +16,56 @@ public class XADemo {
 
 
     public static void main(String[] args) throws Exception {
-        String path = System.getProperty("user.dir") + "/src/main/resources/sharding-config.yaml";
-        DataSource dataSource = YamlShardingSphereDataSourceFactory.createDataSource(new File(path));
+        // 使用 ShardingSphereDataSource
+        String path = "/sharding-config.yaml";
+        File yamlFile = getFile(path);
+        DataSource dataSource = YamlShardingSphereDataSourceFactory.createDataSource(yamlFile);
 
+        // 支持 TransactionType.LOCAL, TransactionType.XA, TransactionType.BASE
         TransactionTypeHolder.set(TransactionType.XA);
-
         Connection conn = dataSource.getConnection();
-        String sql = "insert into order_info (id, user_info_id) VALUES (?, ?);";
-
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            conn.setAutoCommit(false);
-            for (int i = 1; i < 16; i++) {
-                statement.setLong(1, i);
-                statement.setLong(2, i);
-                statement.executeUpdate();
+        conn.setAutoCommit(false);
+        PreparedStatement ps = conn.prepareStatement("INSERT INTO t_order (order_id, user_id) VALUES (?, ?)");
+        try {
+            for (int i = 1; i < 5; i++) {
+                ps.setLong(1, i);
+                ps.setLong(2, i);
+                ps.executeUpdate();
             }
             conn.commit();
-        }
-
-
-        // 如果设置XA事务生效，则所有的数据都不会插入
-        // 如果设置XA事务不生效，则所有数据就会插入到数据库
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            conn.setAutoCommit(false);
-            for (int i = 1; i < 16; i++) {
-                statement.setLong(1, i + 15);
-                statement.setLong(2, i + 15);
-
-                //模拟异常
-                if (i == 10) {
-                    throw new RuntimeException();
-                }
-                statement.executeUpdate();
-            }
-            conn.commit();
-        } catch (Exception e) {
+        } catch (SQLException e) {
+            System.out.println("first error :" + e.getMessage());
             conn.rollback();
         } finally {
+            ps.close();
             conn.close();
         }
 
+        System.out.println("----------------------------------------");
 
+
+        conn.setAutoCommit(false);
+        try {
+            for (int i = 5; i < 9; i++) {
+                ps.setLong(1, i);
+                ps.setLong(2, i);
+                if (i == 8) {
+                    throw new RuntimeException("出错了");
+                }
+                ps.executeUpdate();
+            }
+            conn.commit();
+        } catch (SQLException e) {
+            System.out.println("second error :" + e.getMessage());
+            conn.rollback();
+        } finally {
+            ps.close();
+            conn.close();
+        }
+
+    }
+
+    private static File getFile(final String fileName) {
+        return new File(Thread.currentThread().getClass().getResource(fileName).getFile());
     }
 }
